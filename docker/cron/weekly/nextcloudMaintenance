@@ -1,2 +1,0 @@
-#!/bin/sh
-docker exec -u www-data nextcloud ./occ db:add-missing-indices

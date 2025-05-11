@@ -1,0 +1,91 @@
+# To bring up an environment, first define it: export ENV=dev
+# DEV - Next bring up the environment with its respective yml file: docker-compose up
+
+version: '3.7'
+
+services:
+  proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: proxy
+    restart: always
+    environment:
+      - TRUST_DOWNSTREAM_PROXY=false
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /opt/certs:/etc/nginx/certs
+      - /opt/vhost:/etc/nginx/vhost.d
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/log/nginx:/var/log/nginx
+      - /etc/static:/app/static:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - infra
+  proxy:
+    build: ./proxy
+    container_name: proxy
+    restart: always
+    environment:
+      - TRUST_DOWNSTREAM_PROXY=false
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /opt/certs:/etc/nginx/certs
+      - /opt/vhost:/etc/nginx/vhost.d
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/log/nginx:/var/log/nginx
+      - /etc/static:/app/static:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - infra
+
+  db:
+    container_name: db
+    image: postgres:15.4-alpine3.18
+    restart: on-failure
+    env_file:
+      - env/db.env
+    volumes:
+      - /opt/db:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - infra
+
+  ssl:
+    image: nginxproxy/acme-companion
+    container_name: ssl
+    depends_on:
+      - proxy
+    volumes:
+      - /opt/certs:/etc/nginx/certs
+      - /opt/vhost:/etc/nginx/vhost.d
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/acme:/etc/acme.sh
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - env/ssl.env
+    networks:
+      - infra
+
+  cron:
+    container_name: cron
+    build: ./cron
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - infra
+
+networks:
+  infra:
+    name: infra
+    ipam:
+      driver: default
+      config:
+        - subnet: '172.19.0.0/24'

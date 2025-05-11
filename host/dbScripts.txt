@@ -6,3 +6,10 @@ alter database postfixadmin owner to postfixadm;
 
 GRANT ALL PRIVILEGES ON DATABASE postfixadmin to postfixadm;
 grant all privileges on schema public to postfixadm; (have to be in the db)
+
+-- NEXTCLOUD SCRIPTS
+drop database nextcloud;
+create database nextcloud;
+
+alter database nextcloud owner to ncuser;
+GRANT ALL PRIVILEGES ON DATABASE nextcloud to ncuser;

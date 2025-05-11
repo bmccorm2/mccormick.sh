@@ -5,10 +5,7 @@ ADD https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.3/s6-
 RUN chmod +x /tmp/s6-overlay-amd64-installer && /tmp/s6-overlay-amd64-installer /
 
 RUN         apk add --no-cache docker tzdata
-COPY        daily/* /etc/periodic/daily/
 COPY        crontab /etc/crontabs/root
-
-WORKDIR /etc/periodic/daily/
 
 ENTRYPOINT [ "/init" ]
 CMD [ "/usr/sbin/crond", "-f", "-l", "8" ]
