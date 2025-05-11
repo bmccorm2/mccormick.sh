@@ -8,8 +8,4 @@ rsync -rhPuL \
   docker \
   mccormick.sh:/opt   
 
-rsync -rhPuL \
-  config/ \
-  mccormick.sh:/opt/config
-
 echo Complete!
