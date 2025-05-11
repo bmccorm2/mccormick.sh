@@ -16,32 +16,11 @@ services:
     networks:
       - infra
 
-  mail.fl_cert:
-    build: ./mail.fl_cert
-    container_name: mail.fl_cert
-    env_file:
-      - env/mail.fl_cert.env
-    networks:
-      - infra
-
-  opendkim:
-    build: ./opendkim
-    container_name: opendkim
-    volumes:
-      - /opt/opendkim/keys/mccormick.sh/default.private:/etc/opendkim/keys/mccormick.sh/default.private
-      - /opt/opendkim/keys/1mccormick.com/default.private:/etc/opendkim/keys/1mccormick.com/default.private
-      - /opt/opendkim/keys/firestonelodging.com/default.private:/etc/opendkim/keys/firestonelodging.com/default.private
-      - /etc/localtime:/etc/localtime:ro
-    networks:
-      - infra
-
   mail:
     build: ./mail
     container_name: mail
     hostname: mail
     dns: 1.1.1.1
-    depends_on:
-      - opendkim
     volumes:
       - /var/log:/var/log
       - /opt/certs:/etc/certs
