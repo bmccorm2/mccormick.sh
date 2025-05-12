@@ -55,6 +55,13 @@ services:
     networks:
       - infra
 
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always      
+    networks: 
+      - infra
+
   ssl:
     image: nginxproxy/acme-companion
     container_name: ssl
