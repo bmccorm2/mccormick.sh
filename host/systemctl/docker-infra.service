@@ -9,8 +9,8 @@ Type=oneshot
 RemainAfterExit=yes
 User=root
 WorkingDirectory=/opt/docker
-ExecStart=/usr/bin/docker-compose -f infra.yml pull ; docker-compose -f infra.yml up --build -d
-ExecStop=docker-compose -f infra.yml down
+ExecStart=/usr/bin/docker compose -f infra.yml pull ; docker compose -f infra.yml up --build -d
+ExecStop=docker compose -f infra.yml down
 TimeoutStartSec=0
 
 [Install]

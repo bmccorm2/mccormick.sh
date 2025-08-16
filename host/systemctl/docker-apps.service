@@ -9,10 +9,9 @@ Type=oneshot
 RemainAfterExit=yes
 User=root
 WorkingDirectory=/opt/docker
-ExecStart=/usr/bin/docker-compose -f apps.yml pull ; docker-compose -f apps.yml up --build -d
-ExecStartPost=/bin/bash -c '/usr/bin/docker-compose -f apps.yml exec -T mail bash -c "postmap -F /etc/postfix/sni_maps && postfix reload"'
-ExecStop=/usr/bin/docker-compose -f apps.yml down
-ExecStop=/usr/bin/docker-compose -f apps.yml down
+ExecStart=/usr/bin/docker compose -f apps.yml pull ; docker compose -f apps.yml up --build -d
+ExecStartPost=/bin/bash -c '/usr/bin/docker compose -f apps.yml exec -T mail bash -c "sleep 5 && postmap -F /etc/postfix/sni_maps && postfix reload"'
+ExecStop=/usr/bin/docker compose -f apps.yml down
 TimeoutStartSec=0
 
 [Install]

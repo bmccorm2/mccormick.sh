@@ -1,8 +1,6 @@
 # To bring up an environment, first define it: export ENV=dev
 # DEV - Next bring up the environment with its respective yml file: docker-compose up
 
-version: '3.7'
-
 services:
   postfixadmin:
     container_name: postfixadmin

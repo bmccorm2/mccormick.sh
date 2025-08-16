@@ -1,28 +1,7 @@
 # To bring up an environment, first define it: export ENV=dev
 # DEV - Next bring up the environment with its respective yml file: docker-compose up
 
-version: '3.7'
-
 services:
-  proxy:
-    image: nginxproxy/nginx-proxy:alpine
-    container_name: proxy
-    restart: always
-    environment:
-      - TRUST_DOWNSTREAM_PROXY=false
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - /opt/certs:/etc/nginx/certs
-      - /opt/vhost:/etc/nginx/vhost.d
-      - /opt/html:/usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - /var/log/nginx:/var/log/nginx
-      - /etc/static:/app/static:ro
-      - /etc/localtime:/etc/localtime:ro
-    networks:
-      - infra
   proxy:
     build: ./proxy
     container_name: proxy
@@ -58,8 +37,8 @@ services:
   redis:
     image: redis:alpine
     container_name: redis
-    restart: always      
-    networks: 
+    restart: always
+    networks:
       - infra
 
   ssl:
@@ -82,10 +61,12 @@ services:
   mail.fl_cert:
     build: ./mail.fl_cert
     container_name: mail.fl_cert
+    depends_on:
+      - ssl
     env_file:
       - env/mail.fl_cert.env
     networks:
-      - infra    
+      - infra
 
   opendkim:
     build: ./opendkim
@@ -96,7 +77,7 @@ services:
       - /opt/opendkim/keys/firestonelodging.com/default.private:/etc/opendkim/keys/firestonelodging.com/default.private
       - /etc/localtime:/etc/localtime:ro
     networks:
-      - infra        
+      - infra
 
   cron:
     container_name: cron
