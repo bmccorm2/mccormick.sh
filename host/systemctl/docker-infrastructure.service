@@ -1,0 +1,17 @@
+[Unit]
+Description=Docker Compose Privacy Service
+Requires=docker.service
+After=docker.service
+
+[Service]
+Environment="ENV=prd"
+Type=oneshot
+RemainAfterExit=yes
+User=root
+WorkingDirectory=/opt/docker
+ExecStart=/usr/bin/docker compose -f infrastructure.yml pull ; docker compose -f infrastructure.yml up --build -d
+ExecStop=docker compose -f infrastructure.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

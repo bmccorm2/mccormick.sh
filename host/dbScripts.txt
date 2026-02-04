@@ -1,0 +1,21 @@
+-- SIGN IN
+eda0d7445130:/# psql -U root
+
+-- POSTFIX ADMIN SCRIPS
+drop database postfixadmin;
+create database postfixadmin;
+CREATE USER postfixadm WITH PASSWORD 'CHANGEME';  # password stored in BW
+
+alter database postfixadmin owner to postfixadm;
+
+GRANT ALL PRIVILEGES ON DATABASE postfixadmin to postfixadm;
+grant all privileges on schema public to postfixadm;
+
+-- NEXTCLOUD SCRIPTS
+drop database nextcloud;
+create database nextcloud;
+
+CREATE USER ncuser WITH PASSWORD 'CHANGEME';  # password stored in BW
+
+alter database nextcloud owner to ncuser;
+GRANT ALL PRIVILEGES ON DATABASE nextcloud to ncuser;

@@ -1,0 +1,12 @@
+mccormick.sh REJECT
+mail.mccormick.sh REJECT
+
+localhost REJECT
+localhost.localdomain REJECT
+localdomain REJECT
+
+.tti-emaa.com REJECT
+.azsafari.com REJECT
+.fundmanager-uk.com REJECT
+.abudhabipartnerships.com REJECT
+.xserver.jp           REJECT

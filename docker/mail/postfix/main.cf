@@ -1,0 +1,110 @@
+# THE RESOURCE FOR CONFIGURING POSTFIX
+# https://www.linuxbabe.com/mail-server/setup-basic-postfix-mail-sever-ubuntu
+
+# See /usr/share/postfix/main.cf.dist for a commented, more complete version
+# Debian specific:  Specifying a file name will cause the first
+# line of that file to be used as the name.  The Debian default
+# is /etc/mailname.
+#myorigin = /etc/mailname
+
+smtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)
+biff = no
+
+# appending .domain is the MUA's job.
+append_dot_mydomain = no
+
+# Uncomment the next line to generate "delayed mail" warnings
+#delay_warning_time = 4h
+
+readme_directory = no
+
+# See http://www.postfix.org/COMPATIBILITY_README.html -- default to 3.6 on
+# fresh installs.
+compatibility_level = 3.6
+
+# TLS parameters
+smtpd_tls_cert_file=/etc/certs/mail.mccormick.sh/fullchain.pem
+smtpd_tls_key_file=/etc/certs/mail.mccormick.sh/key.pem
+smtpd_tls_security_level=may
+smtpd_tls_loglevel = 1
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
+#Enable TLS Encryption when Postfix sends outgoing emails
+smtp_tls_loglevel = 1
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+#Enforce TLSv1.3 or TLSv1.2
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtpd_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtp_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+
+smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
+myhostname = mail.mccormick.sh
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+myorigin = /etc/mailname
+mydestination = localhost.localdomain, localhost
+relayhost =
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+mailbox_size_limit = 0
+recipient_delimiter = +
+inet_interfaces = all
+inet_protocols = ipv4
+
+# SPAM 
+smtpd_client_restrictions =
+        permit_mynetworks,
+        permit_sasl_authenticated,
+        reject_unknown_reverse_client_hostname
+smtpd_helo_required = yes
+smtpd_helo_restrictions =
+        permit_mynetworks,
+        permit_sasl_authenticated,
+        reject_invalid_helo_hostname,
+        reject_non_fqdn_helo_hostname,
+        reject_unknown_helo_hostname,
+        check_helo_access hash:/etc/postfix/helo_access
+smtpd_sender_restrictions =
+        permit_mynetworks,
+        permit_sasl_authenticated,
+        reject_unknown_sender_domain        
+
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = no
+smtpd_tls_auth_only = yes
+
+# LOGGING
+maillog_file = /var/log/mail.log
+
+message_size_limit=52428800
+
+smtputf8_enable = no
+
+virtual_transport = lmtp:unix:private/dovecot-lmtp
+
+virtual_mailbox_domains = proxy:pgsql:/etc/postfix/pgsql/virtual_domains_maps.local.cf
+virtual_mailbox_maps = proxy:pgsql:/etc/postfix/pgsql/virtual_mailbox_maps.local.cf
+virtual_alias_maps = proxy:pgsql:/etc/postfix/pgsql/virtual_alias_maps.local.cf
+relay_domains = $mydestination, proxy:pgsql:/etc/postfix/pgsql/relay_domains.local.cf
+
+virtual_mailbox_base = /opt/vmail
+virtual_minimum_uid = 5000
+virtual_uid_maps = static:5000
+virtual_gid_maps = static:5000
+
+# Rate Limiting
+smtpd_client_connection_rate_limit = 30
+smtpd_client_message_rate_limit = 100
+smtpd_client_recipient_rate_limit = 1000
+smtpd_error_sleep_time = 1s
+smtpd_soft_error_limit = 10
+smtpd_hard_error_limit = 20
+smtpd_delay_reject = yes
+
+# DKIM
+milter_default_action = accept
+milter_protocol = 6
+smtpd_milters = inet:opendkim:8891
+non_smtpd_milters = $smtpd_milters
+
+tls_server_sni_maps = hash:/etc/postfix/sni_maps

@@ -1,0 +1,5 @@
+docker/scripts/
+deploy.sh
+db.sqlite3
+.env
+.env.sample

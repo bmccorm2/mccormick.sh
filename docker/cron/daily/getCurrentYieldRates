@@ -1,0 +1,3 @@
+#!/bin/sh
+
+docker run --network www --env-file env/scripts.env bmccorm2/scripts python get_current_yields.py

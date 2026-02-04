@@ -1,0 +1,28 @@
+FROM debian:stable-slim
+
+ARG SERVER_NAME=mail.mccormick.sh
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN echo "postfix postfix/mailname string ${SERVER_NAME}" | debconf-set-selections && \
+    echo "postfix postfix/main_mailer_type string Internet Site" | debconf-set-selections && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        postfix postfix-pgsql dovecot-core dovecot-imapd dovecot-lmtpd \ 
+        dovecot-pgsql dovecot-sieve dovecot-managesieved tzdata ca-certificates dumb-init && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 5000 vmail && \
+    useradd -u 5000 -m -g vmail -s /usr/sbin/nologin -d /opt/vmail vmail
+
+COPY ./postfix          /etc/postfix
+COPY ./dovecot          /etc/dovecot
+
+COPY start-mail.sh /usr/local/bin/start-mail
+RUN chmod +x /usr/local/bin/start-mail
+
+HEALTHCHECK CMD doveadm service status | grep -q imap
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/usr/local/bin/start-mail"]

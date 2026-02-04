@@ -1,0 +1,103 @@
+# To bring up an environment, first define it: export ENV=dev
+# DEV - Next bring up the environment with its respective yml file: docker-compose up
+
+services:
+  proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: proxy
+    restart: always
+    env_file:
+      - env/proxy.env
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /opt/certs:/etc/nginx/certs
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /etc/static:/app/static:ro
+      - /opt/docker/proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf:ro
+      - /opt/docker/proxy/vhost.d:/etc/nginx/vhost.d
+      - /opt/log/nginx:/var/log/nginx
+    networks:
+      - docker-net
+
+  db:
+    container_name: db
+    image: postgres:18.1-alpine
+    restart: on-failure
+    env_file:
+      - env/db.env
+    volumes:
+      - /opt/db:/var/lib/postgresql
+    networks:
+      - docker-net
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    environment:
+      - TZ=America/Denver
+    restart: always
+    networks:
+      - docker-net
+
+  ssl:
+    image: nginxproxy/acme-companion
+    container_name: ssl
+    depends_on:
+      - proxy
+    volumes:
+      - /opt/certs:/etc/nginx/certs
+      - /opt/vhost:/etc/nginx/vhost.d
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/acme:/etc/acme.sh
+    env_file:
+      - env/ssl.env
+    networks:
+      - docker-net
+
+  mail.fl_cert:
+    build: ./mail.fl_cert
+    container_name: mail.fl_cert
+    depends_on:
+      - ssl
+    env_file:
+      - env/mail.fl_cert.env
+    networks:
+      - docker-net
+
+  opendkim:
+    image: instrumentisto/opendkim:alpine
+    container_name: opendkim
+    environment:
+      - TZ=America/Denver
+    volumes:
+      - /opt/docker/opendkim/key.table:/etc/opendkim/key.table
+      - /opt/docker/opendkim/opendkim.conf:/etc/opendkim/opendkim.conf
+      - /opt/docker/opendkim/signing.table:/etc/opendkim/signing.table
+      - /opt/docker/opendkim/trusted.hosts:/etc/opendkim/trusted.hosts
+      - /opt/opendkim/keys/mccormick.sh/default.private:/etc/opendkim/keys/mccormick.sh/default.private:ro
+      - /opt/opendkim/keys/firestonelodging.com/default.private:/etc/opendkim/keys/firestonelodging.com/default.private:ro
+    networks:
+      - docker-net
+
+  cron:
+    container_name: cron
+    build: ./cron
+    environment:
+      - TZ=America/Denver
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - docker-net
+
+networks:
+  docker-net:
+    name: docker-net
+    ipam:
+      driver: default
+      config:
+        - subnet: '172.19.1.0/27'

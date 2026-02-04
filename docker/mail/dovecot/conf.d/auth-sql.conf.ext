@@ -1,0 +1,35 @@
+#   %{user} - username
+#   %{user|username} - user part in user@domain, same as %u if there's no domain
+#   %{user|domain} - domain part in user@domain, empty if there's no domain
+#   %{home} - home directory
+
+sql_driver = pgsql
+passdb_default_password_scheme = SHA512-CRYPT
+
+pgsql db {
+    parameters {
+        user = postfixadm
+        dbname = postfixadmin
+    }
+}
+
+!include_try /etc/dovecot/conf.d/auth-sql.local.conf
+
+passdb sql {
+  query = SELECT username AS user,password FROM mailbox WHERE username = '%{user}' AND active = true
+}
+
+userdb static {
+  fields {
+    uid = 5000
+    gid = 5000
+    home = '/opt/vmail/%{user|domain}/%{user|username}'
+  }
+}
+
+userdb sql {
+  # For using doveadm -A:
+  iterate_query = SELECT username AS user FROM mailbox
+}
+
+

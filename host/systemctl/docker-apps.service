@@ -1,0 +1,17 @@
+[Unit]
+Description=Docker Compose Privacy Service
+Requires=docker.service docker-infrastructure.service
+After=docker.service docker-infrastructure.service
+
+[Service]
+Environment="ENV=prd"
+Type=oneshot
+RemainAfterExit=yes
+User=root
+WorkingDirectory=/opt/docker
+ExecStart=/usr/bin/docker compose -f apps.yml pull ; docker compose -f apps.yml up --build -d
+ExecStop=/usr/bin/docker compose -f apps.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
