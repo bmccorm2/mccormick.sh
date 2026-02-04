@@ -13,7 +13,7 @@ pgsql db {
     }
 }
 
-!include_try /etc/dovecot/conf.d/auth-sql.local.conf
+!include_try /etc/dovecot/conf.d/auth-sql.local.ext
 
 passdb sql {
   query = SELECT username AS user,password FROM mailbox WHERE username = '%{user}' AND active = true
@@ -31,5 +31,4 @@ userdb sql {
   # For using doveadm -A:
   iterate_query = SELECT username AS user FROM mailbox
 }
-
 
