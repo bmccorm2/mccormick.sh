@@ -51,22 +51,32 @@ inet_interfaces = all
 inet_protocols = ipv4
 
 # SPAM 
+smtpd_delay_reject = yes
 smtpd_client_restrictions =
+        reject_rhsbl_client zen.spamhaus.org,
+        reject_rhsbl_client bl.spamcop.net,
+        reject_unknown_reverse_client_hostname,
         permit_mynetworks,
-        permit_sasl_authenticated,
-        reject_unknown_reverse_client_hostname
+        permit_sasl_authenticated
 smtpd_helo_required = yes
 smtpd_helo_restrictions =
         permit_mynetworks,
         permit_sasl_authenticated,
         reject_invalid_helo_hostname,
         reject_non_fqdn_helo_hostname,
-        reject_unknown_helo_hostname,
         check_helo_access hash:/etc/postfix/helo_access
 smtpd_sender_restrictions =
         permit_mynetworks,
         permit_sasl_authenticated,
-        reject_unknown_sender_domain        
+        reject_non_fqdn_sender,
+        check_sender_access hash:/etc/postfix/sender_access
+smtpd_recipient_restrictions =
+        permit_mynetworks,
+        permit_sasl_authenticated,
+        reject_unknown_sender_domain,
+        reject_unauth_destination,
+        reject_non_fqdn_recipient,
+        reject_unknown_recipient_domain
 
 smtpd_sasl_type = dovecot
 smtpd_sasl_path = private/auth
@@ -99,7 +109,7 @@ smtpd_client_recipient_rate_limit = 1000
 smtpd_error_sleep_time = 1s
 smtpd_soft_error_limit = 10
 smtpd_hard_error_limit = 20
-smtpd_delay_reject = yes
+
 
 # DKIM
 milter_default_action = accept

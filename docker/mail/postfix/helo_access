@@ -9,4 +9,4 @@ localdomain REJECT
 .azsafari.com REJECT
 .fundmanager-uk.com REJECT
 .abudhabipartnerships.com REJECT
-.xserver.jp           REJECT
+.xserver.jp REJECT

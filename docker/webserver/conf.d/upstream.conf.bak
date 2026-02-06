@@ -1,9 +1,0 @@
-resolver 127.0.0.11 valid=2s;
-upstream nextcloud_fpm {
-    zone backends 64k;
-    server nextcloud:9000 resolve;
-}
-
-upstream postfixadmin_fpm {
-    server postfixadmin:9000;
-}

@@ -1,2 +1,5 @@
-# ADDRESS PATTERNS                      # ACTION
-3-ownteam.na133.bnc.salesforce.com      REJECT
+# ADDRESS PATTERNS # ACTION
+
+.na133.bnc.salesforce.com REJECT
+.abudhabipartnerships.com REJECT
+.xserver.jp REJECT

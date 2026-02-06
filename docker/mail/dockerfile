@@ -16,11 +16,11 @@ RUN echo "postfix postfix/mailname string ${SERVER_NAME}" | debconf-set-selectio
 RUN groupadd -g 5000 vmail && \
     useradd -u 5000 -m -g vmail -s /usr/sbin/nologin -d /opt/vmail vmail
 
-COPY ./postfix          /etc/postfix
-COPY ./dovecot          /etc/dovecot
-
 COPY start-mail.sh /usr/local/bin/start-mail
 RUN chmod +x /usr/local/bin/start-mail
+
+COPY ./postfix /etc/postfix
+COPY ./dovecot /etc/dovecot
 
 HEALTHCHECK CMD doveadm service status | grep -q imap
 
