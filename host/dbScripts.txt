@@ -1,5 +1,5 @@
 -- SIGN IN
-eda0d7445130:/# psql -U root
+# psql -U root
 
 -- POSTFIX ADMIN SCRIPS
 drop database postfixadmin;

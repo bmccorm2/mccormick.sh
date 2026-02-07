@@ -7,12 +7,10 @@ services:
     container_name: postfixadmin
     restart: on-failure
     hostname: postfixadmin
-    depends_on:
-      - mail
     volumes:
       - /opt/postfixadmin:/var/www/html
     env_file:
-      - env/postfixadmin.env
+      - env/pfa.env
     networks:
       - docker-net
 
@@ -63,74 +61,74 @@ services:
     networks:
       - docker-net
 
-  # vault:
-  #   container_name: vault
-  #   image: vaultwarden/server:alpine
-  #   env_file:
-  #     - env/vault.${ENV}.env
-  #   volumes:
-  #     - /opt/vault:/data
-  #   restart: always
-  #   networks:
-  #     - docker-net
+  vault:
+    container_name: vault
+    image: vaultwarden/server:alpine
+    env_file:
+      - env/vault.${ENV}.env
+    volumes:
+      - /opt/vault:/data
+    restart: always
+    networks:
+      - docker-net
 
-  # pihole:
-  #   container_name: pihole
-  #   hostname: pihole
-  #   image: pihole/pihole:latest
-  #   env_file:
-  #     - env/pihole.${ENV}.env
-  #   volumes:
-  #     - /opt/pihole:/etc/pihole
-  #   restart: unless-stopped
-  #   networks:
-  #     vpn-net:
-  #       ipv4_address: 172.19.2.2
+  pihole:
+    container_name: pihole
+    hostname: pihole
+    image: pihole/pihole:latest
+    env_file:
+      - env/pihole.${ENV}.env
+    volumes:
+      - /opt/pihole:/etc/pihole
+    restart: unless-stopped
+    networks:
+      vpn-net:
+        ipv4_address: 172.19.2.2
 
-  # vpn:
-  #   image: linuxserver/wireguard
-  #   container_name: vpn
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - SYS_MODULE
-  #   depends_on:
-  #     - pihole
-  #   env_file:
-  #     - env/vpn.${ENV}.env
-  #   volumes:
-  #     - /opt/vpn:/config
-  #   ports:
-  #     - 51820:51820/udp
-  #   sysctls:
-  #     - net.ipv4.conf.all.src_valid_mark=1
-  #   networks:
-  #     - vpn-net
-  #   restart: unless-stopped
+  vpn:
+    image: linuxserver/wireguard
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    depends_on:
+      - pihole
+    env_file:
+      - env/vpn.${ENV}.env
+    volumes:
+      - /opt/vpn:/config
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - vpn-net
+    restart: unless-stopped
 
-  # nextcloud:
-  #   container_name: nextcloud
-  #   image: nextcloud:fpm-alpine
-  #   volumes:
-  #     - /opt/nextcloud:/var/www/html
-  #   restart: always
-  #   env_file:
-  #     - env/nextcloud.${ENV}.env
-  #   networks:
-  #     - docker-net
+  nextcloud:
+    container_name: nextcloud
+    image: nextcloud:fpm-alpine
+    volumes:
+      - /opt/nextcloud:/var/www/html
+    restart: always
+    env_file:
+      - env/nc.env
+    networks:
+      - docker-net
 
-  # nc-web:
-  #   image: nginx:alpine
-  #   container_name: nc-web
-  #   restart: always
-  #   env_file:
-  #     - env/nc-web.${ENV}.env
-  #   volumes:
-  #     - ./nc-web/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - /opt/nextcloud:/var/www/html:ro
-  #   depends_on:
-  #     - nextcloud
-  #   networks:
-  #     - docker-net
+  nc-web:
+    image: nginx:alpine
+    container_name: nc-web
+    restart: always
+    env_file:
+      - env/nc-web.env
+    volumes:
+      - ./nc-web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /opt/nextcloud:/var/www/html:ro
+    depends_on:
+      - nextcloud
+    networks:
+      - docker-net
 
 networks:
   docker-net:
