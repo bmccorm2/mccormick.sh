@@ -32,13 +32,15 @@ services:
     build: ./mail
     container_name: mail
     hostname: mail
+    restart: always
     dns:
-      - 1.1.1.1
-      - 8.8.8.8
+      - 172.19.1.9
     volumes:
       - /opt/log:/var/log
       - /opt/certs:/etc/certs
       - /opt/vmail:/opt/vmail
+      - /opt/docker/secrets/postfix/pgsql:/etc/postfix/pgsql:ro
+      - /opt/docker/secrets/dovecot/conf.d/auth-sql.local.ext:/etc/dovecot/conf.d/auth-sql.local.ext:ro
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - env/mail.env
@@ -52,6 +54,7 @@ services:
   snappymail:
     image: djmaze/snappymail
     container_name: snappymail
+    restart: always
     volumes:
       - /opt/snappymail:/var/lib/snappymail
     env_file:
@@ -82,8 +85,8 @@ services:
       - /opt/pihole:/etc/pihole
     restart: unless-stopped
     networks:
-      vpn-net:
-        ipv4_address: 172.19.2.2
+      docker-net:
+        ipv4_address: 172.19.1.20
 
   vpn:
     image: linuxserver/wireguard
@@ -102,7 +105,7 @@ services:
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     networks:
-      - vpn-net
+      - docker-net
     restart: unless-stopped
 
   nextcloud:
@@ -133,9 +136,3 @@ services:
 networks:
   docker-net:
     external: true
-  vpn-net:
-    name: vpn-net
-    ipam:
-      driver: default
-      config:
-        - subnet: '172.19.2.0/29'

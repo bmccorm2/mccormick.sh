@@ -146,5 +146,4 @@ log.txt
 **/log
 
 # Local-only mail secrets
-docker/mail/dovecot/conf.d/auth-sql.local.ext
-docker/mail/postfix/pgsql/*.local.cf
+docker/secrets

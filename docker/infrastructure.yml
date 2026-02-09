@@ -94,6 +94,18 @@ services:
     networks:
       - docker-net
 
+  unbound:
+    image: klutchell/unbound
+    container_name: unbound
+    restart: always
+    depends_on:
+      - redis
+    volumes:
+      - /opt/docker/unbound/cachedb.conf:/etc/unbound/custom.conf.d/cachedb.conf
+    networks:
+      docker-net:
+        ipv4_address: 172.19.1.9
+
 networks:
   docker-net:
     name: docker-net

@@ -51,13 +51,13 @@ inet_interfaces = all
 inet_protocols = ipv4
 
 # SPAM 
-smtpd_delay_reject = yes
+smtpd_delay_reject = no
 smtpd_client_restrictions =
-        reject_rhsbl_client zen.spamhaus.org,
-        reject_rhsbl_client bl.spamcop.net,
-        reject_unknown_reverse_client_hostname,
-        permit_mynetworks,
-        permit_sasl_authenticated
+    permit_mynetworks,
+    check_client_access regexp:/etc/postfix/whitelist_clients,
+    reject_rbl_client zen.spamhaus.org,
+    reject_unknown_reverse_client_hostname,
+    permit_sasl_authenticated
 smtpd_helo_required = yes
 smtpd_helo_restrictions =
         permit_mynetworks,
