@@ -70,13 +70,6 @@ backend = auto
 logpath = /opt/log/dovecot.log
 chain = DOCKER-USER
 
-[postfix]
-enabled = true
-backend = auto
-logpath = /opt/log/mail.log
-mode = aggressive
-chain = DOCKER-USER
-
 [sshd]
 enabled = true
 port = 133
@@ -109,11 +102,27 @@ filter   = nginx-limit-req
 logpath  = /opt/log/nginx/error.log
 chain    = DOCKER-USER
 
+[postfix]
+enabled = true
+backend = auto
+logpath = /opt/log/mail.log
+mode = normal
+chain = DOCKER-USER
+
 [postfix-early-disconnect]
 enabled  = true
 filter   = postfix-early-disconnect
 logpath  = /opt/log/mail.log
 backend  = auto
 maxretry = 1
-findtime = 300
+findtime = 5m
 bantime  = 12h
+
+[postfix-connect]
+enabled  = true
+filter   = postfix-connect
+backend  = auto
+logpath  = /opt/log/mail.log
+maxretry = 1
+findtime = 10m
+bantime  = 24h

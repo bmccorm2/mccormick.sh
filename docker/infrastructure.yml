@@ -12,13 +12,27 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - /opt/certs:/etc/nginx/certs
+      - /opt/certs:/etc/nginx/certs:ro
       - /opt/html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - /etc/static:/app/static:ro
       - /opt/docker/proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf:ro
-      - /opt/docker/proxy/vhost.d:/etc/nginx/vhost.d
-      - /opt/log/nginx:/var/log/nginx
+      - /opt/docker/proxy/vhost.d:/etc/nginx/vhost.d:ro
+      - /opt/log/nginx:/var/log/nginx:rw
+    networks:
+      - docker-net
+
+  ssl:
+    image: nginxproxy/acme-companion
+    container_name: ssl
+    depends_on:
+      - proxy
+    volumes:
+      - /opt/certs:/etc/nginx/certs:rw
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/acme:/etc/acme.sh
+    env_file:
+      - env/ssl.env
     networks:
       - docker-net
 
@@ -42,22 +56,6 @@ services:
     networks:
       - docker-net
 
-  ssl:
-    image: nginxproxy/acme-companion
-    container_name: ssl
-    depends_on:
-      - proxy
-    volumes:
-      - /opt/certs:/etc/nginx/certs
-      - /opt/vhost:/etc/nginx/vhost.d
-      - /opt/html:/usr/share/nginx/html
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /opt/acme:/etc/acme.sh
-    env_file:
-      - env/ssl.env
-    networks:
-      - docker-net
-
   mail.fl_cert:
     build: ./mail.fl_cert
     container_name: mail.fl_cert
@@ -69,8 +67,9 @@ services:
       - docker-net
 
   opendkim:
-    image: instrumentisto/opendkim:alpine
+    build: ./opendkim
     container_name: opendkim
+    stop_grace_period: 1s
     environment:
       - TZ=America/Denver
     volumes:
@@ -80,8 +79,7 @@ services:
       - /opt/docker/opendkim/trusted.hosts:/etc/opendkim/trusted.hosts
       - /opt/opendkim/keys/mccormick.sh/default.private:/etc/opendkim/keys/mccormick.sh/default.private:ro
       - /opt/opendkim/keys/firestonelodging.com/default.private:/etc/opendkim/keys/firestonelodging.com/default.private:ro
-    networks:
-      - docker-net
+      - /opt/opendkim/sock:/var/spool/postfix/opendkim
 
   cron:
     container_name: cron

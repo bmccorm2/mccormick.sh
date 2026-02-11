@@ -41,6 +41,7 @@ services:
       - /opt/vmail:/opt/vmail
       - /opt/docker/secrets/postfix/pgsql:/etc/postfix/pgsql:ro
       - /opt/docker/secrets/dovecot/conf.d/auth-sql.local.ext:/etc/dovecot/conf.d/auth-sql.local.ext:ro
+      - /opt/opendkim/sock:/var/spool/postfix/opendkim
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - env/mail.env

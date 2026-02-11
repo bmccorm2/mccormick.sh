@@ -114,7 +114,7 @@ smtpd_hard_error_limit = 20
 # DKIM
 milter_default_action = accept
 milter_protocol = 6
-smtpd_milters = inet:opendkim:8891
-non_smtpd_milters = $smtpd_milters
+smtpd_milters = unix:/var/spool/postfix/opendkim/opendkim.sock
+non_smtpd_milters = unix:/var/spool/postfix/opendkim/opendkim.sock
 
 tls_server_sni_maps = hash:/etc/postfix/sni_maps
