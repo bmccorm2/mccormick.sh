@@ -13,9 +13,7 @@ RUN echo "postfix postfix/mailname string ${SERVER_NAME}" | debconf-set-selectio
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 5000 vmail && \ 
-    useradd -u 5000 -m -g vmail -s /usr/sbin/nologin -d /opt/vmail vmail && \ 
-    groupadd -g 5010 opendkimSock && \ 
-    usermod -a -G opendkimSock postfix
+    useradd -u 5000 -m -g vmail -s /usr/sbin/nologin -d /opt/vmail vmail
 
 COPY start-mail.sh healthcheck.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/start-mail.sh /usr/local/bin/healthcheck.sh

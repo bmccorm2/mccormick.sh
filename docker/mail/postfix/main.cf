@@ -96,6 +96,7 @@ virtual_mailbox_domains = proxy:pgsql:/etc/postfix/pgsql/virtual_domains_maps.lo
 virtual_mailbox_maps = proxy:pgsql:/etc/postfix/pgsql/virtual_mailbox_maps.local.cf
 virtual_alias_maps = proxy:pgsql:/etc/postfix/pgsql/virtual_alias_maps.local.cf
 relay_domains = $mydestination, proxy:pgsql:/etc/postfix/pgsql/relay_domains.local.cf
+smtpd_sender_login_maps = proxy:pgsql:/etc/postfix/pgsql/sender_login_maps.local.cf
 
 virtual_mailbox_base = /opt/vmail
 virtual_minimum_uid = 5000
@@ -110,11 +111,10 @@ smtpd_error_sleep_time = 1s
 smtpd_soft_error_limit = 10
 smtpd_hard_error_limit = 20
 
-
-# DKIM
-milter_default_action = accept
+# SPAMD/DKIM-SIGNING
+milter_default_action = reject
 milter_protocol = 6
-smtpd_milters = unix:/var/spool/postfix/opendkim/opendkim.sock
-non_smtpd_milters = unix:/var/spool/postfix/opendkim/opendkim.sock
+smtpd_milters = inet:rspamd:11332
+non_smtpd_milters = inet:rspamd:11332
 
 tls_server_sni_maps = hash:/etc/postfix/sni_maps

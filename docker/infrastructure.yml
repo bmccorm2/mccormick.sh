@@ -66,20 +66,22 @@ services:
     networks:
       - docker-net
 
-  opendkim:
-    build: ./opendkim
-    container_name: opendkim
-    stop_grace_period: 1s
+  rspamd:
+    image: rspamd/rspamd
+    container_name: rspamd
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - unbound
+    volumes:
+      - /opt/rspamd:/var/lib/rspamd
+      - /opt/docker/rspamd/local.d:/etc/rspamd/local.d:ro
+      - /opt/rspamd/keys/mccormick.sh/default.private:/var/lib/rspamd/dkim/mccormick.sh.default.key:ro
+      - /opt/rspamd/keys/firestonelodging.com/default.private:/var/lib/rspamd/dkim/firestonelodging.com.default.key:ro
     environment:
       - TZ=America/Denver
-    volumes:
-      - /opt/docker/opendkim/key.table:/etc/opendkim/key.table
-      - /opt/docker/opendkim/opendkim.conf:/etc/opendkim/opendkim.conf
-      - /opt/docker/opendkim/signing.table:/etc/opendkim/signing.table
-      - /opt/docker/opendkim/trusted.hosts:/etc/opendkim/trusted.hosts
-      - /opt/opendkim/keys/mccormick.sh/default.private:/etc/opendkim/keys/mccormick.sh/default.private:ro
-      - /opt/opendkim/keys/firestonelodging.com/default.private:/etc/opendkim/keys/firestonelodging.com/default.private:ro
-      - /opt/opendkim/sock:/var/spool/postfix/opendkim
+    networks:
+      - docker-net
 
   cron:
     container_name: cron
