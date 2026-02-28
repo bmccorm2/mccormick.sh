@@ -1,0 +1,8 @@
+FROM busybox:stable
+
+ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 /usr/bin/dumb-init
+RUN chmod +x /usr/bin/dumb-init
+
+HEALTHCHECK CMD kill -0 1 || exit 1
+
+CMD ["dumb-init", "sleep", "infinity"]

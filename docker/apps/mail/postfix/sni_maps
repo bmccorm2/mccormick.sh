@@ -1,0 +1,2 @@
+mail.firestonelodging.com /etc/certs/mail.firestonelodging.com/key.pem, /etc/certs/mail.firestonelodging.com/fullchain.pem
+mail.mccormick.sh /etc/certs/mail.mccormick.sh/key.pem, /etc/certs/mail.mccormick.sh/fullchain.pem

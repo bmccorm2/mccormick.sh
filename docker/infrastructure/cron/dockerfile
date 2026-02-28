@@ -1,0 +1,12 @@
+FROM busybox:stable
+
+ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 /usr/bin/dumb-init
+RUN chmod +x /usr/bin/dumb-init
+
+RUN mkdir -p /var/spool/cron/crontabs
+
+COPY crontab /etc/crontabs/root
+
+HEALTHCHECK CMD pgrep crond || exit 1
+
+CMD ["dumb-init", "/bin/crond", "-f", "-l", "8"]

@@ -1,0 +1,121 @@
+# To bring up an environment, first define it: export ENV=dev
+# DEV - Next bring up the environment with its respective yml file: docker-compose up
+
+services:
+  proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: proxy
+    restart: always
+    env_file:
+      - env/proxy.env
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /opt/certs:/etc/nginx/certs:ro
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /opt/docker/infrastructure/proxy/uploadsize.conf:/etc/nginx/conf.d/uploadsize.conf:ro
+      - /opt/docker/infrastructure/proxy/vhost.d:/etc/nginx/vhost.d:ro
+      - /opt/log/nginx:/var/log/nginx:rw
+    networks:
+      - docker-net
+
+  ssl:
+    image: nginxproxy/acme-companion
+    container_name: ssl
+    depends_on:
+      - proxy
+    volumes:
+      - /opt/certs:/etc/nginx/certs:rw
+      - /opt/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/acme:/etc/acme.sh
+    env_file:
+      - env/ssl.env
+    networks:
+      - docker-net
+
+  db:
+    container_name: db
+    image: postgres:18.1-alpine
+    restart: on-failure
+    env_file:
+      - env/db.env
+    volumes:
+      - /opt/db:/var/lib/postgresql
+    networks:
+      - docker-net
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    volumes:
+      - /opt/redis:/data
+    environment:
+      - TZ=America/Denver
+    restart: always
+    networks:
+      - docker-net
+
+  mail.fl_cert:
+    build: ./mail.fl_cert
+    container_name: mail.fl_cert
+    depends_on:
+      - ssl
+    env_file:
+      - env/mail.fl_cert.env
+    networks:
+      - docker-net
+
+  rspamd:
+    image: rspamd/rspamd
+    container_name: rspamd
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - unbound
+    volumes:
+      - /opt/rspamd:/var/lib/rspamd
+      - /opt/docker/infrastructure/rspamd/local.d:/etc/rspamd/local.d:ro
+      - /opt/docker/infrastructure/rspamd/override.d:/etc/rspamd/override.d:ro
+      - /opt/rspamd/keys/mccormick.sh/default.private:/var/lib/rspamd/dkim/mccormick.sh.default.key:ro
+      - /opt/rspamd/keys/firestonelodging.com/default.private:/var/lib/rspamd/dkim/firestonelodging.com.default.key:ro
+      - /opt/vmail:/var/mail:ro
+    dns:
+      - 172.19.1.9
+    environment:
+      - TZ=America/Denver
+    networks:
+      - docker-net
+
+  cron:
+    container_name: cron
+    build: ./cron
+    environment:
+      - TZ=America/Denver
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-net
+
+  unbound:
+    image: klutchell/unbound
+    container_name: unbound
+    restart: always
+    depends_on:
+      - redis
+    volumes:
+      - /opt/docker/infrastructure/unbound:/etc/unbound/custom.conf.d:ro
+    networks:
+      docker-net:
+        ipv4_address: 172.19.1.9
+
+networks:
+  docker-net:
+    name: docker-net
+    ipam:
+      driver: default
+      config:
+        - subnet: '172.19.1.0/27'

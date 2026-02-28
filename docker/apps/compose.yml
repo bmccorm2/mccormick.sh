@@ -1,0 +1,138 @@
+# To bring up an environment, first define it: export ENV=dev
+# DEV - Next bring up the environment with its respective yml file: docker-compose up
+
+services:
+  postfixadmin:
+    image: postfixadmin:fpm-alpine
+    container_name: postfixadmin
+    restart: on-failure
+    hostname: postfixadmin
+    volumes:
+      - /opt/postfixadmin:/var/www/html
+    env_file:
+      - env/pfa.env
+    networks:
+      - docker-net
+
+  pfa-web:
+    image: nginx:alpine
+    container_name: pfa-web
+    restart: always
+    env_file:
+      - env/pfa-web.${ENV}.env
+    volumes:
+      - ./pfa-web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /opt/postfixadmin:/var/www/html:ro
+    depends_on:
+      - postfixadmin
+    networks:
+      - docker-net
+
+  mail:
+    build: ./mail
+    container_name: mail
+    hostname: mail
+    restart: always
+    dns:
+      - 172.19.1.9
+    volumes:
+      - /opt/log:/var/log
+      - /opt/certs:/etc/certs
+      - /opt/vmail:/opt/vmail
+      - /opt/docker/apps/secrets/postfix/pgsql:/etc/postfix/pgsql:ro
+      - /opt/docker/apps/secrets/dovecot/conf.d/auth-sql.local.ext:/etc/dovecot/conf.d/auth-sql.local.ext:ro
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - env/mail.env
+    ports:
+      - '25:25'
+      - '587:587'
+      - '993:993'
+    networks:
+      - docker-net
+
+  snappymail:
+    image: djmaze/snappymail
+    container_name: snappymail
+    restart: always
+    volumes:
+      - /opt/snappymail:/var/lib/snappymail
+    env_file:
+      - env/snappymail.env
+    depends_on:
+      - mail
+    networks:
+      - docker-net
+
+  vault:
+    container_name: vault
+    image: vaultwarden/server:alpine
+    env_file:
+      - env/vault.${ENV}.env
+    volumes:
+      - /opt/vault:/data
+    restart: always
+    networks:
+      - docker-net
+
+  pihole:
+    container_name: pihole
+    hostname: pihole
+    image: pihole/pihole:latest
+    env_file:
+      - env/pihole.${ENV}.env
+    volumes:
+      - /opt/pihole:/etc/pihole
+    restart: unless-stopped
+    networks:
+      docker-net:
+        ipv4_address: 172.19.1.20
+
+  vpn:
+    image: linuxserver/wireguard
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    depends_on:
+      - pihole
+    env_file:
+      - env/vpn.${ENV}.env
+    volumes:
+      - /opt/vpn:/config
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - docker-net
+    restart: unless-stopped
+
+  nextcloud:
+    container_name: nextcloud
+    image: nextcloud:fpm-alpine
+    volumes:
+      - /opt/nextcloud:/var/www/html
+    restart: always
+    env_file:
+      - env/nc.env
+    networks:
+      - docker-net
+
+  nc-web:
+    image: nginx:alpine
+    container_name: nc-web
+    restart: always
+    env_file:
+      - env/nc-web.env
+    volumes:
+      - ./nc-web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /opt/nextcloud:/var/www/html:ro
+    depends_on:
+      - nextcloud
+    networks:
+      - docker-net
+
+networks:
+  docker-net:
+    external: true
