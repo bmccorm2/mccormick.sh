@@ -7,6 +7,7 @@
 0	5	1	*	*	run-parts /etc/periodic/monthly
 */5  *  *  *  * docker exec -u www-data nextcloud php -f /var/www/html/cron.php
 0 3 * * 0 docker exec -u www-data nextcloud ./occ db:add-missing-indices
+0 4 * * 0 docker exec -u root rspamd rspamc learn_spam /var/mail/firestonelodging.com/manager/Maildir/.Junk/cur/*
 
 # FirestoneLodging Certs
 0 3 * * * docker run --rm \

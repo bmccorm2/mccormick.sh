@@ -33,8 +33,6 @@ services:
     container_name: mail
     hostname: mail
     restart: always
-    dns:
-      - 172.19.1.9
     volumes:
       - /opt/log:/var/log
       - /opt/certs:/etc/certs

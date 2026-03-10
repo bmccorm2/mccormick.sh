@@ -74,7 +74,6 @@ services:
     restart: unless-stopped
     depends_on:
       - redis
-      - unbound
     volumes:
       - /opt/rspamd:/var/lib/rspamd
       - /opt/docker/infrastructure/rspamd/local.d:/etc/rspamd/local.d:ro
@@ -82,8 +81,6 @@ services:
       - /opt/rspamd/keys/mccormick.sh/default.private:/var/lib/rspamd/dkim/mccormick.sh.default.key:ro
       - /opt/rspamd/keys/firestonelodging.com/default.private:/var/lib/rspamd/dkim/firestonelodging.com.default.key:ro
       - /opt/vmail:/var/mail:ro
-    dns:
-      - 172.19.1.9
     environment:
       - TZ=America/Denver
     networks:
@@ -99,18 +96,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - docker-net
-
-  unbound:
-    image: klutchell/unbound
-    container_name: unbound
-    restart: always
-    depends_on:
-      - redis
-    volumes:
-      - /opt/docker/infrastructure/unbound:/etc/unbound/custom.conf.d:ro
-    networks:
-      docker-net:
-        ipv4_address: 172.19.1.9
 
 networks:
   docker-net:
