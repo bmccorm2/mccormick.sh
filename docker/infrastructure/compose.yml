@@ -68,24 +68,6 @@ services:
     networks:
       - docker-net
 
-  rspamd:
-    image: rspamd/rspamd
-    container_name: rspamd
-    restart: unless-stopped
-    depends_on:
-      - redis
-    volumes:
-      - /opt/rspamd:/var/lib/rspamd
-      - /opt/docker/infrastructure/rspamd/local.d:/etc/rspamd/local.d:ro
-      - /opt/docker/infrastructure/rspamd/override.d:/etc/rspamd/override.d:ro
-      - /opt/rspamd/keys/mccormick.sh/default.private:/var/lib/rspamd/dkim/mccormick.sh.default.key:ro
-      - /opt/rspamd/keys/firestonelodging.com/default.private:/var/lib/rspamd/dkim/firestonelodging.com.default.key:ro
-      - /opt/vmail:/var/mail:ro
-    environment:
-      - TZ=America/Denver
-    networks:
-      - docker-net
-
   cron:
     container_name: cron
     build: ./cron

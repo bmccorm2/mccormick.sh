@@ -1,11 +1,19 @@
 FROM busybox:stable
 
+# dumb-init
 ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 /usr/bin/dumb-init
 RUN chmod +x /usr/bin/dumb-init
 
+# docker CLI
+ADD https://download.docker.com/linux/static/stable/x86_64/docker-25.0.3.tgz /tmp/docker.tgz
+RUN tar -xzf /tmp/docker.tgz -C /tmp \
+    && mv /tmp/docker/docker /usr/bin/docker \
+    && chmod +x /usr/bin/docker \
+    && rm -rf /tmp/docker /tmp/docker.tgz
+
 RUN mkdir -p /var/spool/cron/crontabs
 
-COPY crontab /etc/crontabs/root
+COPY crontab /var/spool/cron/crontabs/root
 
 HEALTHCHECK CMD pgrep crond || exit 1
 

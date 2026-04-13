@@ -62,6 +62,23 @@ services:
     networks:
       - docker-net
 
+  rspamd:
+    image: rspamd/rspamd
+    container_name: rspamd
+    restart: unless-stopped
+    volumes:
+      - /opt/rspamd:/var/lib/rspamd
+      - /opt/log/rspamd.log:/var/log/rspamd/rspamd.log
+      - /opt/docker/apps/rspamd/local.d:/etc/rspamd/local.d:ro
+      - /opt/docker/apps/rspamd/override.d:/etc/rspamd/override.d:ro
+      - /opt/rspamd/keys/mccormick.sh/default.private:/var/lib/rspamd/dkim/mccormick.sh.default.key:ro
+      - /opt/rspamd/keys/firestonelodging.com/default.private:/var/lib/rspamd/dkim/firestonelodging.com.default.key:ro
+      - /opt/vmail:/var/mail:ro
+    environment:
+      - TZ=America/Denver
+    networks:
+      - docker-net
+
   vault:
     container_name: vault
     image: vaultwarden/server:alpine
