@@ -11,9 +11,13 @@ TMP_BODY="/tmp/rspamd_body.txt"
 TMP_MSG="/tmp/rspamd_message.txt"
 
 NOW_RFC2822=$(date -R)
+TODAY_ISO=$(date +%Y-%m-%d)
+TODAY_SYSLOG=$(date '+%b %e')
 
-# Collect today's rejects
-grep "$(date +%Y-%m-%d)" "$LOG_FILE" | grep "(reject):" > "$TMP_BODY" || true
+# Collect today's messages where Rspamd's final action was reject.
+grep -E "^($TODAY_ISO|$TODAY_SYSLOG)" "$LOG_FILE" \
+  | grep "rspamd_task_write_log:" \
+  | grep -E "\(default: [A-Z] \(reject\):" > "$TMP_BODY" || true
 
 # Build body + count
 if [ -s "$TMP_BODY" ]; then
