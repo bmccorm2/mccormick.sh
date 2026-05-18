@@ -15,6 +15,9 @@ RUN mkdir -p /var/spool/cron/crontabs
 
 COPY crontab /var/spool/cron/crontabs/root
 
+COPY rspamd-reject-report.sh /opt/scripts/rspamd-reject-report.sh
+RUN chmod +x /opt/scripts/rspamd-reject-report.sh
+
 HEALTHCHECK CMD pgrep crond || exit 1
 
 CMD ["dumb-init", "/bin/crond", "-f", "-l", "8"]

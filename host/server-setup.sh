@@ -2,7 +2,7 @@
 
 apt update && \
     apt install \
-    htop ncdu rsync fish fail2ban lsof micro ufw unbound
+    htop ncdu rsync fish fail2ban lsof micro ufw unbound logrotate
 
 apt remove exim4 exim4-base exim4-config exim4-daemon-light &&
     apt autoremove --purge
