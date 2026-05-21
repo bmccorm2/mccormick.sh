@@ -76,7 +76,7 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /opt/log/rspamd.log:/var/log/rspamd/rspamd.log:ro
+      - /opt/log:/var/log/rspamd:ro
     networks:
       - docker-net
 

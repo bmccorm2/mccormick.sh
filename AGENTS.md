@@ -1,97 +1,159 @@
 # McCormick.sh Infrastructure Guide for Agents
 
-This repository manages the server infrastructure and Docker-based applications for the `mccormick.sh` project. It includes mail services (Postfix, Dovecot), storage (Nextcloud), security (Vaultwarden, Pi-hole, WireGuard), and web management (PostfixAdmin).
+This repository manages the server infrastructure and Docker-based applications for the `mccormick.sh` host. It is primarily an operations repo: Docker Compose definitions, service configuration, host setup files, and a small set of utility scripts.
 
-## Project Structure
-- `/docker/apps/`: Main Docker Compose services.
-- `/docker/apps/env/`: Environment-specific configurations (`.prd.env`, `.dev.env`).
-- `/host/`: Server setup scripts and host-level configurations (systemctl, fail2ban).
-- `deploy.sh`: Primary deployment script.
+## Codebase Overview
 
-## Commands
+- `deploy.sh` — deploys the Docker configuration to the remote host with `rsync`.
+- `deployExclude.txt` — files/directories excluded from deployment. Always check this before changing deployment behavior.
+- `docker/infrastructure/` — base infrastructure stack shared by the apps.
+  - `compose.yml` defines reverse proxy, ACME companion, Postgres, Redis, mail certificate helper, and cron jobs.
+  - `env/` contains environment files used by infrastructure services.
+  - `proxy/`, `cron/`, `mail.fl_cert/`, and `unbound/` contain service-specific configuration/build files.
+- `docker/apps/` — application stack.
+  - `compose.yml` defines mail, PostfixAdmin, SnappyMail, Rspamd, Vaultwarden, Pi-hole, WireGuard, Nextcloud, and app Nginx frontends.
+  - `env/` contains application environment files.
+  - `mail/`, `pfa-web/`, `nc-web/`, and `rspamd/` contain service-specific config/build files.
+- `docker/scripts/` — Python utility scripts and Dockerfile for running those scripts. This directory is excluded from normal deploy sync.
+- `host/` — host-level setup and configuration files.
+  - `systemctl/` contains systemd units for managing the Docker stacks.
+  - `fail2ban/`, `logrotate/`, SSH, resolver, and unbound configs support host hardening/ops.
+  - `dbScripts.txt` contains common Postgres setup/maintenance commands.
 
-### Deployment
-Deployment is handled by `rsync` to the remote server.
-- **Deploy everything:** `./deploy.sh`
-- **Verify deployment:** The script syncs the `docker` directory to `/opt` on the target host.
-- **Important:** `docker/scripts/` and `deploy.sh` are excluded from the `rsync` sync (see `deployExclude.txt`).
+## Deployment Model
 
-### Docker Operations
-Services are defined in `/docker/apps/compose.yml`.
-- **Set environment:** `export ENV=dev` or `export ENV=prd`
-- **Build services:** `docker-compose build` (run from `/docker/apps/`)
-- **Start services:** `docker-compose up -d`
-- **Stop services:** `docker-compose down`
-- **Check health:** `docker inspect --format='{{json .State.Health}}' <container_name>`
+Deployment is handled by syncing the local `docker/` directory to `/opt/docker` on the remote host:
 
-### Systemd Services (on host)
-Systemd services in `host/systemctl/` manage the lifecycle of docker services on the remote server.
-- `docker-infrastructure.service`: Base infrastructure (networks, etc.)
-- `docker-apps.service`: The applications defined in `/opt/docker/apps/compose.yml`.
+```bash
+./deploy.sh
+```
 
-### Python Scripts
-Located in `/docker/scripts/`.
-- **Build image:** `docker build -t mccormick-scripts .` (run from `/docker/scripts/`)
-- **Run script:** `docker run --env-file .env.production mccormick-scripts python <script_name>.py`
+The script uses:
 
-### Testing & Verification
-There are no automated test suites. Use manual verification:
-- **Mail Health:** Run `docker/apps/mail/healthcheck.sh` inside the mail container.
-- **Logs:** `docker-compose logs -f <service>`
-- **Database Scripts:** Refer to `host/dbScripts.txt` for common SQL operations.
+```bash
+rsync -rhPuL --exclude-from=deployExclude.txt --delete docker mccormick.sh:/opt
+```
 
-### Common Database Operations
-- **Access Postgres:** `psql -U root`
-- **PostfixAdmin:** Setup involves creating the `postfixadmin` database and user `postfixadm`.
-- **Nextcloud:** Setup involves creating the `nextcloud` database and user `ncuser`.
-- **Note:** All credentials should be stored in Vaultwarden (BW).
+Important deployment notes:
 
----
+- `docker/scripts/`, `deploy.sh`, and `db.sqlite3` are currently excluded by `deployExclude.txt`.
+- Do not assume a local file is deployed; verify it is not excluded.
+- Before modifying deployment behavior, read both `docker/apps/compose.yml` and `deployExclude.txt`.
+- Runtime persistent data lives under `/opt/...` on the server and should not be committed to this repo.
 
-## Code Style Guidelines
+## Docker Operations
 
-### Shell Scripts (`.sh`)
-- **Interpreter:** Always use `#!/bin/bash` or `#!/bin/sh`.
-- **Error Handling:** Use `set -e` to exit on error.
-- **Formatting:** 2-space indentation.
-- **Variables:** Double-quote all variable expansions (e.g., `"${VAR}"`) to prevent word splitting.
-- **Linting:** Agents should run `shellcheck` if available before committing changes.
+Application stack:
 
-### Python Scripts (`.py`)
-- **Indentation:** 4 spaces (PEP 8).
-- **Naming:** `snake_case` for functions and variables.
-- **Docstrings:** Use triple single quotes `'''docstring'''` for function and module documentation.
-- **Imports:** Group imports: standard library, third-party, and local modules.
-- **Linting:** Use `pylint`, `autopep8`, and `isort`.
+```bash
+cd docker/apps
+export ENV=prd   # or dev, when a dev env file exists
+Docker Compose up -d
+```
 
-### Docker & Compose
-- **Images:** Prefer `alpine` based images for minimal footprint.
-- **Indentation:** 2-space indentation for `compose.yml`.
-- **Naming:** Service names in `compose.yml` should be lowercase kebab-case (e.g., `pfa-web`, `snappymail`).
-- **Persistence:** Use host volumes mapped to `/opt/<service>` for persistent data.
-- **Environment:** Never hardcode secrets. Use `env_file` referencing files in `env/`.
+Infrastructure stack:
 
-### Configuration (Nginx, Postfix, etc.)
-- **Naming:** Use descriptive names for configuration files (e.g., `nginx.conf`, `sender_login_maps.local.cf`).
-- **Structure:** Service-specific configs should reside in subdirectories named after the service (e.g., `docker/apps/pfa-web/`).
+```bash
+cd docker/infrastructure
+Docker Compose up -d
+```
 
-### Common Service Details
-- **Mail:** Postfix and Dovecot are used. DKIM keys should be owned by `opendkim:vmail`.
-- **PostfixAdmin:** Used for managing virtual mailboxes.
-- **Sieve Filters:** Used for mail filtering/auto-replies.
-- **Pi-hole:** Acts as the internal DNS server for the `docker-net` network.
-- **Nextcloud:** PHP-FPM based, requires a separate Nginx frontend (`nc-web`).
+This repo may use either `docker compose` or legacy `docker-compose` depending on the host. Preserve the style already used in nearby docs/scripts unless changing intentionally.
 
-### Error Handling
-- **Container Restarts:** Use `restart: always` or `restart: on-failure` in `compose.yml`.
-- **Health Checks:** Implement health checks in `Dockerfile` or `compose.yml` for critical services.
+## Major Services
 
----
+Infrastructure stack:
 
-## Security
-- **Secrets:** Do not commit plain-text passwords or API keys. Ensure they are added to `.env` files which should be excluded from git if they contain sensitive data (though this repo currently tracks some `.env` files for boilerplate).
-- **Permissions:** Root-owned files in Docker volumes should be minimized; use `vmail` (UID 5000) for mail storage.
+- `proxy` — nginx-proxy frontend on ports 80/443.
+- `ssl` — nginxproxy/acme-companion for Let's Encrypt certificates.
+- `db` — Postgres database.
+- `redis` — Redis service.
+- `mail.fl_cert` — helper for mail certificate handling.
+- `cron` — cron container for operational jobs such as Rspamd reject reports.
 
-## Rules
-- **Cursor/Copilot Rules:** None found in the current project root.
-- **Agent Protocol:** Always analyze `compose.yml` and `deployExclude.txt` before modifying deployment logic.
+Application stack:
+
+- `mail` — custom Postfix/Dovecot mail container.
+- `postfixadmin` and `pfa-web` — PostfixAdmin FPM app and Nginx frontend.
+- `snappymail` — webmail.
+- `rspamd` — spam filtering/DKIM.
+- `vault` — Vaultwarden.
+- `pihole` — internal DNS, fixed address `172.19.1.20` on `docker-net`.
+- `vpn` — WireGuard.
+- `nextcloud` and `nc-web` — Nextcloud FPM app and Nginx frontend.
+
+## Systemd Services
+
+Host systemd units are in `host/systemctl/`:
+
+- `docker-infrastructure.service` — manages the infrastructure stack.
+- `docker-apps.service` — manages the application stack.
+
+Use these on the remote host when checking startup/lifecycle behavior.
+
+## Manual Verification
+
+There is no automated test suite. Use targeted checks:
+
+- Validate Compose syntax after edits:
+  ```bash
+  cd docker/apps && docker compose config
+  cd docker/infrastructure && docker compose config
+  ```
+- Check service logs:
+  ```bash
+  docker compose logs -f <service>
+  ```
+- Check container health:
+  ```bash
+  docker inspect --format='{{json .State.Health}}' <container_name>
+  ```
+- Mail health check lives at `docker/apps/mail/healthcheck.sh` and should be run inside the mail container when needed.
+
+## Style Guidelines
+
+Shell scripts:
+
+- Use `#!/bin/bash` or `#!/bin/sh`.
+- Prefer `set -e` for scripts that should stop on errors.
+- Use 2-space indentation.
+- Double-quote variable expansions, e.g. `"${VAR}"`.
+- Run `shellcheck` if available after changing shell scripts.
+
+Python scripts:
+
+- Use 4-space indentation and PEP 8 naming.
+- Prefer `snake_case` for functions and variables.
+- Use triple single-quoted docstrings.
+- Group imports: standard library, third-party, local.
+- If available, use `pylint`, `autopep8`, and `isort`.
+
+Docker/Compose:
+
+- Keep YAML indentation at 2 spaces.
+- Service names should be lowercase/kebab-case where possible.
+- Prefer Alpine-based images when adding new services.
+- Use `restart: always`, `restart: unless-stopped`, or `restart: on-failure` consistently for long-running services.
+- Use `env_file` for configuration and secrets; do not hardcode credentials in Compose files.
+- Persistent data should map to `/opt/<service>` on the host.
+
+Configuration files:
+
+- Keep service-specific config in the relevant service directory.
+- Use descriptive filenames such as `nginx.conf`, `uploadsize.conf`, or `auth-sql.local.ext`.
+
+## Security Notes
+
+- Do not commit plaintext passwords, tokens, API keys, DKIM private keys, or production-only secrets.
+- Environment files in this repo may contain boilerplate, but treat them carefully and avoid adding real secrets.
+- DKIM private keys should be owned appropriately on the server; the README notes that DKIM keys must not be root-owned.
+- Be careful with `/opt` volume ownership, especially mail storage under `/opt/vmail`.
+- Review exposed ports before adding services. Current public-facing ports include mail ports and the reverse proxy.
+
+## Agent Rules
+
+- Prefer reading existing files before editing; do not infer service behavior solely from names.
+- Before changing deployment logic, always inspect `docker/apps/compose.yml`, `docker/infrastructure/compose.yml`, and `deployExclude.txt`.
+- Use precise, minimal edits and preserve existing formatting.
+- Do not add generated files, local caches, databases, or runtime data to the repo.
+- If a change affects production services, include manual verification steps in the final response.
