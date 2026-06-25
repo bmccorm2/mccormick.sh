@@ -40,6 +40,7 @@ The helper script only permits commands matching this whitelist:
 - `free*`
 - `uptime*`
 - `ps*`
+- `grep*`
 - `journalctl*`
 - `systemctl status*`
 - `docker ps*`
@@ -86,6 +87,8 @@ Inspect files deployed under `/opt/docker`:
 ~/bin/server_inspect.sh mccormick.sh "ls -la /opt/docker"
 ~/bin/server_inspect.sh mccormick.sh "ls -la /opt/docker/apps"
 ```
+
+If logs are not in docker, they can be found at /opt/log.
 
 ## Safety Rules
 

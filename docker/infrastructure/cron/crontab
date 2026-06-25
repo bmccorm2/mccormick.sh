@@ -8,7 +8,7 @@
 */5  *  *  *  * docker exec -u www-data nextcloud php -f /var/www/html/cron.php
 0 3 * * 0 docker exec -u www-data nextcloud ./occ db:add-missing-indices
 0 4 * * 0 docker exec -u root rspamd sh -c 'rspamc learn_spam /var/mail/firestonelodging.com/manager/Maildir/.Junk/cur/*'
-0 6 * * * /opt/scripts/rspamd-reject-report.sh
+5 4 * * 0 docker exec -u root rspamd sh -c 'rspamc learn_ham /var/mail/mccormick.sh/bryan/Maildir/.Ham/cur/*'
 
 # FirestoneLodging Certs
 0 3 * * * docker run --rm -v /opt/letsencrypt:/etc/letsencrypt -v /opt/letsencrypt-lib:/var/lib/letsencrypt certbot/certbot renew --quiet && docker restart mail

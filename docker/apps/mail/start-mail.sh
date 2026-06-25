@@ -10,5 +10,8 @@ postmap -F /etc/postfix/sni_maps
 echo "Starting Postfix..."
 postfix start
 
+echo "Compiling global sieve script..."
+sievec /etc/dovecot/sieve/global-spam.sieve
+
 echo "Starting Dovecot..."
 exec dovecot -F

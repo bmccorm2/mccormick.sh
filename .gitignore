@@ -147,3 +147,6 @@ log.txt
 
 # Local-only mail secrets
 docker/apps/secrets
+
+# Local-only Nextcloud config (real secrets; template is config.php.example)
+docker/apps/nextcloud/config.php

@@ -40,6 +40,7 @@ Important deployment notes:
 - Do not assume a local file is deployed; verify it is not excluded.
 - Before modifying deployment behavior, read both `docker/apps/compose.yml` and `deployExclude.txt`.
 - Runtime persistent data lives under `/opt/...` on the server and should not be committed to this repo.
+- Mail storage (virtual mailboxes) lives at `/opt/vmail` on the host, mounted as `/var/mail` inside the `mail` and `rspamd` containers.
 
 ## Docker Operations
 
@@ -73,7 +74,7 @@ Infrastructure stack:
 
 Application stack:
 
-- `mail` — custom Postfix/Dovecot mail container.
+- `mail` — custom Postfix/Dovecot mail container. Dovecot is version 2.4.
 - `postfixadmin` and `pfa-web` — PostfixAdmin FPM app and Nginx frontend.
 - `snappymail` — webmail.
 - `rspamd` — spam filtering/DKIM.
@@ -147,7 +148,7 @@ Configuration files:
 - Do not commit plaintext passwords, tokens, API keys, DKIM private keys, or production-only secrets.
 - Environment files in this repo may contain boilerplate, but treat them carefully and avoid adding real secrets.
 - DKIM private keys should be owned appropriately on the server; the README notes that DKIM keys must not be root-owned.
-- Be careful with `/opt` volume ownership, especially mail storage under `/opt/vmail`.
+- Be careful with `/opt` volume ownership, especially mail storage under `/opt/vmail` (virtual mailboxes; not accessible to the deploy user without sudo).
 - Review exposed ports before adding services. Current public-facing ports include mail ports and the reverse proxy.
 
 ## Agent Rules
