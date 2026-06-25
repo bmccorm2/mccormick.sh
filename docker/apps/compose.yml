@@ -126,8 +126,10 @@ services:
   nextcloud:
     container_name: nextcloud
     image: nextcloud:fpm-alpine
+    entrypoint: ["sh", "-c", "chown 82:82 /var/www/html/config/config.php && /entrypoint.sh php-fpm"]
     volumes:
       - /opt/nextcloud:/var/www/html
+      - ./nextcloud/config.php:/var/www/html/config/config.php
     restart: always
     env_file:
       - env/nc.env

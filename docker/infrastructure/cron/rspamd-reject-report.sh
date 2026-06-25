@@ -18,6 +18,8 @@ LOG_FILES="/var/log/rspamd/rspamd.log*"
 TMP_BODY="/tmp/rspamd_body.txt"
 TMP_MSG="/tmp/rspamd_message.txt"
 TMP_MATCHES="/tmp/rspamd_matches.txt"
+TMP_FLAGGED="/tmp/rspamd_flagged.txt"
+TMP_REJECTED="/tmp/rspamd_rejected.txt"
 
 NOW_RFC2822=$(date -R)
 NOW_EPOCH=$(date '+%s')
@@ -59,36 +61,57 @@ for log_file in $LOG_FILES; do
 done > "$TMP_MATCHES"
 
 grep "rspamd_task_write_log:" "$TMP_MATCHES" \
-  | grep -E "\(default: [A-Z] \(reject\):" > "$TMP_BODY" || true
+  | grep -E "\(default: [A-Z] \(add header\):" > "$TMP_FLAGGED" || true
 
-# Build body + count
-if [ -s "$TMP_BODY" ]; then
-  COUNT=$(wc -l < "$TMP_BODY" | tr -d ' ')
-  BODY=$(cat "$TMP_BODY")
+grep "rspamd_task_write_log:" "$TMP_MATCHES" \
+  | grep -E "\(default: [A-Z] \(reject\):" > "$TMP_REJECTED" || true
+
+# Build body + counts
+if [ -s "$TMP_FLAGGED" ]; then
+  FLAGGED_COUNT=$(wc -l < "$TMP_FLAGGED" | tr -d ' ')
+  FLAGGED_BODY=$(cat "$TMP_FLAGGED")
 else
-  COUNT=0
-  BODY="No rejected messages found in the last 24 hours."
+  FLAGGED_COUNT=0
+  FLAGGED_BODY="No flagged messages found in the last 24 hours."
 fi
+
+if [ -s "$TMP_REJECTED" ]; then
+  REJECTED_COUNT=$(wc -l < "$TMP_REJECTED" | tr -d ' ')
+  REJECTED_BODY=$(cat "$TMP_REJECTED")
+else
+  REJECTED_COUNT=0
+  REJECTED_BODY="No rejected messages found in the last 24 hours."
+fi
+
+TOTAL_COUNT=$((FLAGGED_COUNT + REJECTED_COUNT))
 
 MSG_ID="$(date +%s).$$@firestonelodging.com"
 
 cat > "$TMP_MSG" <<EOF
 From: rspamd-report@firestonelodging.com
 To: $EMAIL
-Subject: Rspamd Reject Report ($COUNT messages)
+Subject: Rspamd Spam & Reject Report ($TOTAL_COUNT messages)
 Date: $NOW_RFC2822
 Message-ID: <$MSG_ID>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Rspamd rejected $COUNT messages in the last 24 hours:
+Rspamd flagged/rejected $TOTAL_COUNT messages in the last 24 hours.
 
 Window: $START_ISO through $NOW_ISO
 Log files: $LOG_FILES
 
-$BODY
+====================================================================
+FLAGGED SPAM - DELIVERED TO JUNK ($FLAGGED_COUNT messages)
+====================================================================
+$FLAGGED_BODY
+
+====================================================================
+OUTRIGHT REJECTED - NOT DELIVERED ($REJECTED_COUNT messages)
+====================================================================
+$REJECTED_BODY
 EOF
 
 docker exec -i "$MAIL_CONTAINER" sendmail -t < "$TMP_MSG"
 
-rm -f "$TMP_BODY" "$TMP_MSG" "$TMP_MATCHES"
+rm -f "$TMP_BODY" "$TMP_MSG" "$TMP_MATCHES" "$TMP_FLAGGED" "$TMP_REJECTED"
