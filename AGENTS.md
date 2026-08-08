@@ -1,160 +1,59 @@
-# McCormick.sh Infrastructure Guide for Agents
+# McCormick.sh Infrastructure Guide
 
-This repository manages the server infrastructure and Docker-based applications for the `mccormick.sh` host. It is primarily an operations repo: Docker Compose definitions, service configuration, host setup files, and a small set of utility scripts.
+Operations repo for the `mccormick.sh` host: Docker Compose stacks, service config, host setup, and utility scripts.
 
-## Codebase Overview
+## Layout
 
-- `deploy.sh` — deploys the Docker configuration to the remote host with `rsync`.
-- `deployExclude.txt` — files/directories excluded from deployment. Always check this before changing deployment behavior.
-- `docker/infrastructure/` — base infrastructure stack shared by the apps.
-  - `compose.yml` defines reverse proxy, ACME companion, Postgres, Redis, mail certificate helper, and cron jobs.
-  - `env/` contains environment files used by infrastructure services.
-  - `proxy/`, `cron/`, `mail.fl_cert/`, and `unbound/` contain service-specific configuration/build files.
-- `docker/apps/` — application stack.
-  - `compose.yml` defines mail, PostfixAdmin, SnappyMail, Rspamd, Vaultwarden, Pi-hole, WireGuard, Nextcloud, and app Nginx frontends.
-  - `env/` contains application environment files.
-  - `mail/`, `pfa-web/`, `nc-web/`, and `rspamd/` contain service-specific config/build files.
-- `docker/scripts/` — Python utility scripts and Dockerfile for running those scripts. This directory is excluded from normal deploy sync.
-- `host/` — host-level setup and configuration files.
-  - `systemctl/` contains systemd units for managing the Docker stacks.
-  - `fail2ban/`, `logrotate/`, SSH, resolver, and unbound configs support host hardening/ops.
-  - `dbScripts.txt` contains common Postgres setup/maintenance commands.
+- `deploy.sh` / `deployExclude.txt` — rsync `docker/` to `/opt/docker` on the remote host. Excludes `docker/scripts/`, `deploy.sh`, `db.sqlite3`. Check the exclude file before touching deploy behavior.
+- `docker/infrastructure/` — shared base stack (`compose.yml`): proxy, ACME companion, Postgres, Redis, mail cert helper, cron.
+- `docker/apps/` — app stack (`compose.yml`): mail (Postfix/Dovecot 2.4), PostfixAdmin, SnappyMail, Rspamd, Vaultwarden, Pi-hole, WireGuard, Nextcloud, and their Nginx frontends.
+- `docker/scripts/` — Python utilities (not deployed).
+- `host/` — systemd units (`systemctl/`), fail2ban, logrotate, SSH, resolver, unbound configs, `dbScripts.txt`.
 
-## Deployment Model
+Service config lives in each service's subdirectory. Persistent runtime data lives under `/opt/...` on the server and is never committed. Mail storage is `/opt/vmail` → `/var/mail` in the `mail`/`rspamd` containers.
 
-Deployment is handled by syncing the local `docker/` directory to `/opt/docker` on the remote host:
+## Operations
 
 ```bash
-./deploy.sh
+./deploy.sh                              # sync docker/ to host
+
+cd docker/apps && ENV=prd docker compose up -d
+cd docker/infrastructure && docker compose up -d
 ```
 
-The script uses:
+Systemd units on the host: `docker-apps.service`, `docker-infrastructure.service`.
+
+No test suite. Verify with:
 
 ```bash
-rsync -rhPuL --exclude-from=deployExclude.txt --delete docker mccormick.sh:/opt
+docker compose config                    # validate after edits
+docker compose logs -f <service>
+docker inspect --format='{{json .State.Health}}' <container>
 ```
 
-Important deployment notes:
+## Nextcloud Upgrades
 
-- `docker/scripts/`, `deploy.sh`, and `db.sqlite3` are currently excluded by `deployExclude.txt`.
-- Do not assume a local file is deployed; verify it is not excluded.
-- Before modifying deployment behavior, read both `docker/apps/compose.yml` and `deployExclude.txt`.
-- Runtime persistent data lives under `/opt/...` on the server and should not be committed to this repo.
-- Mail storage (virtual mailboxes) lives at `/opt/vmail` on the host, mounted as `/var/mail` inside the `mail` and `rspamd` containers.
+`docker/apps/nextcloud/config.php` is bind-mounted into the container and also lives in this repo. `occ upgrade` rewrites `'version'` (and other keys) inside that file **on the server**, but `deploy.sh` will blindly overwrite the server's file with whatever is committed locally.
 
-## Docker Operations
+Upgrade procedure, in order:
 
-Application stack:
+1. In local `docker/apps/nextcloud/config.php`, set `'config_is_read_only' => false`, then `./deploy.sh`.
+2. `cd docker/apps && docker compose up -d nextcloud`
+3. `docker compose exec -u www-data nextcloud php occ upgrade`
+4. Pull the server's updated `config.php` back into the repo **before doing anything else**. The container's entrypoint `chown`s the file to `82:82`, so `bryan` can't read it directly on the server — copy it to a readable location first:
+   ```bash
+   ssh mccormick.sh 'sudo cp /opt/docker/apps/nextcloud/config.php ~/config.php && sudo chown bryan ~/config.php'
+   scp mccormick.sh:~/config.php docker/apps/nextcloud/config.php
+   ssh mccormick.sh 'rm ~/config.php'
+   ```
+5. In that freshly-pulled file, set `'config_is_read_only' => true` again, then `./deploy.sh`.
 
-```bash
-cd docker/apps
-export ENV=prd   # or dev, when a dev env file exists
-Docker Compose up -d
-```
+Skipping step 4 and just flipping the flag back locally will redeploy the stale pre-upgrade `version`, causing Nextcloud to report "you need to upgrade" again even though the upgrade already succeeded.
 
-Infrastructure stack:
+## Conventions
 
-```bash
-cd docker/infrastructure
-Docker Compose up -d
-```
-
-This repo may use either `docker compose` or legacy `docker-compose` depending on the host. Preserve the style already used in nearby docs/scripts unless changing intentionally.
-
-## Major Services
-
-Infrastructure stack:
-
-- `proxy` — nginx-proxy frontend on ports 80/443.
-- `ssl` — nginxproxy/acme-companion for Let's Encrypt certificates.
-- `db` — Postgres database.
-- `redis` — Redis service.
-- `mail.fl_cert` — helper for mail certificate handling.
-- `cron` — cron container for operational jobs such as Rspamd reject reports.
-
-Application stack:
-
-- `mail` — custom Postfix/Dovecot mail container. Dovecot is version 2.4.
-- `postfixadmin` and `pfa-web` — PostfixAdmin FPM app and Nginx frontend.
-- `snappymail` — webmail.
-- `rspamd` — spam filtering/DKIM.
-- `vault` — Vaultwarden.
-- `pihole` — internal DNS, fixed address `172.19.1.20` on `docker-net`.
-- `vpn` — WireGuard.
-- `nextcloud` and `nc-web` — Nextcloud FPM app and Nginx frontend.
-
-## Systemd Services
-
-Host systemd units are in `host/systemctl/`:
-
-- `docker-infrastructure.service` — manages the infrastructure stack.
-- `docker-apps.service` — manages the application stack.
-
-Use these on the remote host when checking startup/lifecycle behavior.
-
-## Manual Verification
-
-There is no automated test suite. Use targeted checks:
-
-- Validate Compose syntax after edits:
-  ```bash
-  cd docker/apps && docker compose config
-  cd docker/infrastructure && docker compose config
-  ```
-- Check service logs:
-  ```bash
-  docker compose logs -f <service>
-  ```
-- Check container health:
-  ```bash
-  docker inspect --format='{{json .State.Health}}' <container_name>
-  ```
-- Mail health check lives at `docker/apps/mail/healthcheck.sh` and should be run inside the mail container when needed.
-
-## Style Guidelines
-
-Shell scripts:
-
-- Use `#!/bin/bash` or `#!/bin/sh`.
-- Prefer `set -e` for scripts that should stop on errors.
-- Use 2-space indentation.
-- Double-quote variable expansions, e.g. `"${VAR}"`.
-- Run `shellcheck` if available after changing shell scripts.
-
-Python scripts:
-
-- Use 4-space indentation and PEP 8 naming.
-- Prefer `snake_case` for functions and variables.
-- Use triple single-quoted docstrings.
-- Group imports: standard library, third-party, local.
-- If available, use `pylint`, `autopep8`, and `isort`.
-
-Docker/Compose:
-
-- Keep YAML indentation at 2 spaces.
-- Service names should be lowercase/kebab-case where possible.
-- Prefer Alpine-based images when adding new services.
-- Use `restart: always`, `restart: unless-stopped`, or `restart: on-failure` consistently for long-running services.
-- Use `env_file` for configuration and secrets; do not hardcode credentials in Compose files.
-- Persistent data should map to `/opt/<service>` on the host.
-
-Configuration files:
-
-- Keep service-specific config in the relevant service directory.
-- Use descriptive filenames such as `nginx.conf`, `uploadsize.conf`, or `auth-sql.local.ext`.
-
-## Security Notes
-
-- Do not commit plaintext passwords, tokens, API keys, DKIM private keys, or production-only secrets.
-- Environment files in this repo may contain boilerplate, but treat them carefully and avoid adding real secrets.
-- DKIM private keys should be owned appropriately on the server; the README notes that DKIM keys must not be root-owned.
-- Be careful with `/opt` volume ownership, especially mail storage under `/opt/vmail` (virtual mailboxes; not accessible to the deploy user without sudo).
-- Review exposed ports before adding services. Current public-facing ports include mail ports and the reverse proxy.
-
-## Agent Rules
-
-- Prefer reading existing files before editing; do not infer service behavior solely from names.
-- Before changing deployment logic, always inspect `docker/apps/compose.yml`, `docker/infrastructure/compose.yml`, and `deployExclude.txt`.
-- Use precise, minimal edits and preserve existing formatting.
-- Do not add generated files, local caches, databases, or runtime data to the repo.
-- If a change affects production services, include manual verification steps in the final response.
+- Shell: `#!/bin/bash`, `set -e`, 2-space indent, quote expansions, `shellcheck` if available.
+- Python: PEP 8, 4-space indent, `snake_case`.
+- Compose/YAML: 2-space indent, kebab-case service names, Alpine images preferred, `env_file` for secrets, persistent data under `/opt/<service>`.
+- Never commit passwords, tokens, API keys, or DKIM private keys. DKIM keys must not be root-owned on the server.
+- Read existing files before editing; make minimal edits; don't add generated files, caches, or runtime data.
