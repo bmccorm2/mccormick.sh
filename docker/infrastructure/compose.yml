@@ -59,8 +59,11 @@ services:
       - docker-net
 
   mail.fl_cert:
-    build: ./mail.fl_cert
+    image: busybox:stable
     container_name: mail.fl_cert
+    init: true
+    command: ["sleep", "infinity"]
+    restart: always
     depends_on:
       - ssl
     env_file:
@@ -71,12 +74,12 @@ services:
   cron:
     container_name: cron
     build: ./cron
+    init: true
     environment:
       - TZ=America/Denver
     restart: always
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /opt/log:/var/log/rspamd:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - docker-net
 

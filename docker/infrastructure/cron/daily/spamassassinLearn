@@ -1,3 +1,0 @@
-#!/bin/sh
-
-# docker exec mail ./opt/spamassassin-learn

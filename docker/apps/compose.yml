@@ -81,7 +81,7 @@ services:
 
   vault:
     container_name: vault
-    image: vaultwarden/server:alpine
+    image: vaultwarden/server
     env_file:
       - env/vault.${ENV}.env
     volumes:

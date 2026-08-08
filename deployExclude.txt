@@ -1,4 +1,3 @@
 docker/scripts/
 deploy.sh
 db.sqlite3
-docker/apps/nextcloud/config.php

@@ -1,29 +1,12 @@
-FROM alpine:latest AS tzdata
+FROM docker:cli
+
 RUN apk add --no-cache tzdata
 
-FROM busybox:stable
-
-# tzdata for timezone support
-COPY --from=tzdata /usr/share/zoneinfo /usr/share/zoneinfo
-
-# dumb-init
-ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 /usr/bin/dumb-init
-RUN chmod +x /usr/bin/dumb-init
-
-# docker CLI
-ADD https://download.docker.com/linux/static/stable/x86_64/docker-25.0.3.tgz /tmp/docker.tgz
-RUN tar -xzf /tmp/docker.tgz -C /tmp \
-    && mv /tmp/docker/docker /usr/bin/docker \
-    && chmod +x /usr/bin/docker \
-    && rm -rf /tmp/docker /tmp/docker.tgz
-
-RUN mkdir -p /var/spool/cron/crontabs
-
 COPY crontab /var/spool/cron/crontabs/root
-
-COPY rspamd-reject-report.sh /opt/scripts/rspamd-reject-report.sh
-RUN chmod +x /opt/scripts/rspamd-reject-report.sh
+RUN chmod 0600 /var/spool/cron/crontabs/root
 
 HEALTHCHECK CMD pgrep crond || exit 1
 
-CMD ["dumb-init", "/bin/crond", "-f", "-l", "8"]
+# docker:cli sets its own entrypoint; override so crond runs directly
+ENTRYPOINT []
+CMD ["crond", "-f", "-l", "8"]
