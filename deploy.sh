@@ -4,6 +4,6 @@ rsync -rhPuL \
   --exclude-from=deployExclude.txt \
   --delete \
   docker \
-  mccormick.sh:/opt
+  bryan@mail:/opt
 
 echo Complete!

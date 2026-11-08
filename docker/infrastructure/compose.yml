@@ -87,7 +87,8 @@ services:
 networks:
   docker-net:
     name: docker-net
+    driver: bridge
     ipam:
-      driver: default
       config:
-        - subnet: '172.19.1.0/27'
+        - subnet: 172.18.0.0/24
+          gateway: 172.18.0.1

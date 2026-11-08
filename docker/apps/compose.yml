@@ -94,38 +94,41 @@ services:
     container_name: pihole
     hostname: pihole
     image: pihole/pihole:latest
+    ports:
+      - "100.68.5.103:53:53/tcp"
+      - "100.68.5.103:53:53/udp"
+      - "100.68.5.103:8080:80/tcp"
     env_file:
       - env/pihole.${ENV}.env
     volumes:
       - /opt/pihole:/etc/pihole
     restart: unless-stopped
     networks:
-      docker-net:
-        ipv4_address: 172.19.1.20
-
-  vpn:
-    image: linuxserver/wireguard
-    container_name: vpn
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    depends_on:
-      - pihole
-    env_file:
-      - env/vpn.${ENV}.env
-    volumes:
-      - /opt/vpn:/config
-    ports:
-      - 51820:51820/udp
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    networks:
       - docker-net
-    restart: unless-stopped
+
+  # vpn:
+  #   image: linuxserver/wireguard
+  #   container_name: vpn
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - SYS_MODULE
+  #   depends_on:
+  #     - pihole
+  #   env_file:
+  #     - env/vpn.${ENV}.env
+  #   volumes:
+  #     - /opt/vpn:/config
+  #   ports:
+  #     - 51820:51820/udp
+  #   sysctls:
+  #     - net.ipv4.conf.all.src_valid_mark=1
+  #   networks:
+  #     - docker-net
+  #   restart: unless-stopped
 
   nextcloud:
     container_name: nextcloud
-    image: nextcloud:fpm-alpine
+    image: nextcloud:35-fpm-alpine
     entrypoint: ["sh", "-c", "chown 82:82 /var/www/html/config/config.php && /entrypoint.sh php-fpm"]
     volumes:
       - /opt/nextcloud:/var/www/html
